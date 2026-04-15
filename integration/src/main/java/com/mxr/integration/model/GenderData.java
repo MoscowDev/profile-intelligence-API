@@ -17,8 +17,4 @@ public class GenderData {
 
     @JsonProperty("sample_size")
     public int sampleSize;
-    @JsonProperty("is_confident")
-    public boolean confident;
-    @JsonProperty("processed_at")
-    public String processedAt;
 }

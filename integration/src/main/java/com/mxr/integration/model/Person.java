@@ -5,30 +5,43 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.validation.constraints.NotNull;
+import lombok.Builder;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
+@Builder
 
 public class Person {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private Long id;
+    private UUID id;
     
     @NotNull
-    String name;
+    private String name;
 
     @NotNull
-    String gender;
+    private String gender;
 
-    double genderProbability;
+    private double genderProbability;
 
-    int count;
+    private int sampleSize;
 
-    int age;
+    private int age;
 
-    int ageGroup;
+    private String ageGroup;
 
-    int countryId;
+    private String countryId;
+
+    private double countryProbability;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
+
 
     
 }
