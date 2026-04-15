@@ -29,7 +29,7 @@ public class classifyController {
     
     @GetMapping("/api/classify")
     public ProcessedResponse getMethodName(@RequestParam String name) {
-        GenderizeResponse response = integrationService.getResponseEntity(name);
+        GenderizeResponse response = integrationService.getGenderizeResponse(name);
 
         GenderData genderData = processGenderizeResponse(response);
        
@@ -38,6 +38,7 @@ public class classifyController {
 
     }
 
+    
     private GenderData processGenderizeResponse(GenderizeResponse response) {
         boolean isConfident = response.getProbability() >= 0.7 && response.getSampleSize() >= 100;
         return GenderData.builder()

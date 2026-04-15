@@ -44,7 +44,7 @@ public class IntegrationService {
         
         int age = agifyResponse.getAge();
     
-        if( age == 0) throw new NullAgeException("Age cannot be null");
+        if(age == 0) throw new NullAgeException("Age cannot be null");
         return agifyResponse;
     }
 
