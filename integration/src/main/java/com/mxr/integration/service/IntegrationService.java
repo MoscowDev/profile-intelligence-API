@@ -1,15 +1,17 @@
 package com.mxr.integration.service;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
 import com.mxr.integration.Response.AgifyResponse;
 import com.mxr.integration.Response.GenderizeResponse;
 import com.mxr.integration.Response.NationalizeResponse;
 import com.mxr.integration.exceptions.MissingGenderizeDataException;
 import com.mxr.integration.exceptions.MissingOrEmptyNameException;
+import com.mxr.integration.exceptions.PersonAlreadyExistsException;
 import com.mxr.integration.exceptions.AgifyExceptions.NullAgeException;
 import com.mxr.integration.exceptions.NationalizeExceptions.MissingCountryDataException;
 import com.mxr.integration.exceptions.InvalidNameException;
@@ -46,8 +48,6 @@ public class IntegrationService {
     }
 
     public AgifyResponse getAgifyResponse(String name) {
-        validateName(name);
-
         String agifyUrl = "https://api.agify.io?name=" + name;
         AgifyResponse agifyResponse = restTemplate.getForObject(agifyUrl, AgifyResponse.class);
 
@@ -59,8 +59,6 @@ public class IntegrationService {
     }
 
     public NationalizeResponse getNationalizeResponse(String name) {
-        validateName(name);
-
         String nationalizeUrl = "https://api.nationalize.io?name=" + name;
         NationalizeResponse nationalizeResponse = restTemplate.getForObject(nationalizeUrl, NationalizeResponse.class);
         List<CountryData> countries = nationalizeResponse.getCountries();
@@ -72,19 +70,26 @@ public class IntegrationService {
 
     public Person mapToPerson(GenderizeResponse genderizeResponse, AgifyResponse agifyResponse,
             NationalizeResponse nationalizeResponse) {
+        List<CountryData> countries = nationalizeResponse.getCountries();
+        UUID id = UUID.randomUUID();
         return Person.builder()
+                .id(id)
                 .name(genderizeResponse.getName())
                 .gender(genderizeResponse.getGender())
                 .genderProbability(genderizeResponse.getProbability())
                 .sampleSize(genderizeResponse.getSampleSize())
                 .age(agifyResponse.getAge())
                 .ageGroup(calculateAgeGroup(agifyResponse.getAge()))
-                .countryId(getCountryWithHighestProbability(nationalizeResponse.getCountries()).getCountryId())
-                .countryProbability(getCountryWithHighestProbability(nationalizeResponse.getCountries()).getProbability())
+                .countryId(getCountryWithHighestProbability(countries).getCountryId())
+                .countryProbability(getCountryWithHighestProbability(countries).getProbability())
                 .build();
     }
 
     public Person savePerson(Person person) {
+        Optional<Person> existingPerson = repo.findNameIgnoreCase(person.getName());
+        if (existingPerson.isPresent()) {
+            throw new PersonAlreadyExistsException();
+        }
         return repo.save(person);
     }
     
@@ -96,8 +101,8 @@ public class IntegrationService {
 
     private String calculateAgeGroup(int age) {
         if (age <= 12 && age >= 0) return "child";
-        if (age <= 19 && age > 13) return "teenager";
-        if (age <= 59 && age > 20) return "adult";
+        if (age <= 19 && age >= 13) return "teenager";
+        if (age <= 59 && age >= 20) return "adult";
         if (age >= 60) return "senior";
         return "senior";
     }

@@ -42,6 +42,15 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(PersonAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handlePersonAlreadyExistsException(PersonAlreadyExistsException ex){
+        ErrorResponse response = new ErrorResponse(
+            "error",
+            ex.getMessage()
+        );
+        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    }
+
     @ExceptionHandler(MissingGenderizeDataException.class)
     public ResponseEntity<ErrorResponse> handleMissingGenderizeDataException(MissingGenderizeDataException ex){
         ErrorResponse response = new ErrorResponse(
