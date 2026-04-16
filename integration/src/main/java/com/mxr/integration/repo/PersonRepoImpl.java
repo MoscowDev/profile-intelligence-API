@@ -11,4 +11,6 @@ import com.mxr.integration.model.Person;
 @Repository
 public interface PersonRepoImpl extends JpaRepository<Person, UUID>, JpaSpecificationExecutor<Person> {
     Optional<Person> findNameIgnoreCase(String name);
+
+    void deleteByName(String name);
 }

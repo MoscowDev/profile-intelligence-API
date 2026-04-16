@@ -13,6 +13,7 @@ import com.mxr.integration.Response.NationalizeResponse;
 import com.mxr.integration.exceptions.MissingGenderizeDataException;
 import com.mxr.integration.exceptions.MissingOrEmptyNameException;
 import com.mxr.integration.exceptions.PersonAlreadyExistsException;
+import com.mxr.integration.exceptions.PersonNotFoundException;
 import com.mxr.integration.exceptions.AgifyExceptions.NullAgeException;
 import com.mxr.integration.exceptions.NationalizeExceptions.MissingCountryDataException;
 import com.mxr.integration.exceptions.InvalidNameException;
@@ -23,35 +24,48 @@ import com.mxr.integration.spec.PersonSpecification;
 
 @Service
 public class IntegrationService {
-    
+
     private final PersonRepoImpl repo;
 
     IntegrationService(PersonRepoImpl personRepoImpl) {
         this.repo = personRepoImpl;
     }
-    
+
     RestTemplate restTemplate = new RestTemplate();
 
-    public List<Person> savePerson(String name) {
+    public Person savePerson(String name) {
         GenderizeResponse genderizeResponse = getGenderizeResponse(name);
         AgifyResponse agifyResponse = getAgifyResponse(name);
         NationalizeResponse nationalizeResponse = getNationalizeResponse(name);
         Person person = mapToPerson(genderizeResponse, agifyResponse, nationalizeResponse);
-        
+
         Optional<Person> existingPerson = repo.findNameIgnoreCase(person.getName());
         if (existingPerson.isPresent()) {
             throw new PersonAlreadyExistsException();
         }
 
+        return repo.save(person);
+
+    }
+
+    public List<Person> searchPeople(String gender, String countryId, String ageGroup) {
         Specification<Person> spec = Specification
-                .where(PersonSpecification.hasGender(person.getGender()))
-                .and(PersonSpecification.hasCountryId(person.getCountryId()))
-                .and(PersonSpecification.hasAgeGroup(person.getAgeGroup()));
+                .where(PersonSpecification.hasGender(gender))
+                .and(PersonSpecification.hasCountryId(countryId))
+                .and(PersonSpecification.hasAgeGroup(ageGroup));
 
         return repo.findAll(spec);
     }
 
-    private GenderizeResponse getGenderizeResponse(String name) {
+    public Person getPersonById(UUID id) {
+        return repo.findById(id).orElseThrow(() -> new PersonNotFoundException("Person not found"));
+    }
+
+    public void deletePerson(String name) {
+        repo.deleteByName(name);
+    }
+
+    public GenderizeResponse getGenderizeResponse(String name) {
         validateName(name);
 
         String genderizeUrl = "https://api.genderize.io/?name=" + name;
@@ -68,7 +82,7 @@ public class IntegrationService {
         return genderizeResponse;
     }
 
-    private AgifyResponse getAgifyResponse(String name) {
+    public AgifyResponse getAgifyResponse(String name) {
         String agifyUrl = "https://api.agify.io?name=" + name;
         AgifyResponse agifyResponse = restTemplate.getForObject(agifyUrl, AgifyResponse.class);
 
@@ -79,7 +93,7 @@ public class IntegrationService {
         return agifyResponse;
     }
 
-    private NationalizeResponse getNationalizeResponse(String name) {
+    public NationalizeResponse getNationalizeResponse(String name) {
         String nationalizeUrl = "https://api.nationalize.io?name=" + name;
         NationalizeResponse nationalizeResponse = restTemplate.getForObject(nationalizeUrl, NationalizeResponse.class);
         List<CountryData> countries = nationalizeResponse.getCountries();
@@ -106,8 +120,6 @@ public class IntegrationService {
                 .build();
     }
 
-    
-    
     private CountryData getCountryWithHighestProbability(List<CountryData> countries) {
         return countries.stream()
                 .max((c1, c2) -> Double.compare(c1.getProbability(), c2.getProbability()))
@@ -115,13 +127,17 @@ public class IntegrationService {
     }
 
     private String calculateAgeGroup(int age) {
-        if (age <= 12 && age >= 0) return "child";
-        if (age <= 19 && age >= 13) return "teenager";
-        if (age <= 59 && age >= 20) return "adult";
-        if (age >= 60) return "senior";
+        if (age <= 12 && age >= 0)
+            return "child";
+        if (age <= 19 && age >= 13)
+            return "teenager";
+        if (age <= 59 && age >= 20)
+            return "adult";
+        if (age >= 60)
+            return "senior";
         return "senior";
     }
-    
+
     private void validateName(String name) {
         if (name.isBlank())
             throw new MissingOrEmptyNameException("Name cannot be empty");
