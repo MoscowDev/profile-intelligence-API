@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.UUID;
 import com.fasterxml.uuid.Generators;
 import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Builder
@@ -37,18 +38,24 @@ public class Person {
     @NotNull
     private String gender;
 
+    @JsonProperty("gender_probability")
     private double genderProbability;
 
+    @JsonProperty("sample_size")
     private int sampleSize;
 
     private int age;
 
+    @JsonProperty("age_group")
     private String ageGroup;
 
+    @JsonProperty("country_id")
     private String countryId;
 
+    @JsonProperty("country_probability")
     private double countryProbability;
 
+    @JsonProperty("created_at")
     @CreationTimestamp
     private Instant createdAt;
 

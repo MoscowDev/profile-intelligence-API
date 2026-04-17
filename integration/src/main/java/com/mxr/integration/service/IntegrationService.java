@@ -102,7 +102,7 @@ public class IntegrationService {
         String nationalizeUrl = "https://api.nationalize.io?name=" + name;
         NationalizeResponse nationalizeResponse = restTemplate.getForObject(nationalizeUrl, NationalizeResponse.class);
         List<CountryData> countries = nationalizeResponse.getCountries();
-        if (countries.isEmpty())
+        if (countries == null || countries.isEmpty())
             throw new MissingCountryDataException("Nationalize returned an invalid response");
 
         return nationalizeResponse;
