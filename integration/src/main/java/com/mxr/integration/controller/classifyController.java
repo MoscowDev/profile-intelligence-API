@@ -2,16 +2,21 @@ package com.mxr.integration.controller;
 
 import org.springframework.web.bind.annotation.RestController;
 
-import com.mxr.integration.Response.GenderizeResponse;
+import com.mxr.integration.Response.MultipleProcessedResponse;
 import com.mxr.integration.Response.ProcessedResponse;
-import com.mxr.integration.model.GenderData;
+import com.mxr.integration.model.Person;
 import com.mxr.integration.service.IntegrationService;
 
-import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
@@ -26,36 +31,52 @@ public class classifyController {
     public ResponseEntity<String> health() {
         return new ResponseEntity<>("OK", HttpStatus.OK);
     }
-    
-    @GetMapping("/api/classify")
-    public ProcessedResponse getProcessedResponse(@RequestParam String name) {
-        GenderizeResponse response = integrationService.getGenderizeResponse(name);
 
-        GenderData genderData = processGenderizeResponse(response);
-       
-        ProcessedResponse processedResponse = processGenderData(genderData);
-        return processedResponse;
-
-    }
-
-     
-    private GenderData processGenderizeResponse(GenderizeResponse response) {
-        boolean isConfident = response.getProbability() >= 0.7 && response.getSampleSize() >= 100;
-        return GenderData.builder()
-                .name(response.getName())
-                .gender(response.getGender())
-                .probability(response.getProbability())
-                .sampleSize(response.getSampleSize())
-                .confident(isConfident)
-                .processedAt(Instant.now().toString())
-                .build();
-    }
-
-    private ProcessedResponse processGenderData(GenderData data) {
+    @PostMapping("/api/profiles/{name}")
+    public ProcessedResponse getPersonByName(@RequestBody String name) {
+        Person person = integrationService.savePerson(name);
 
         return ProcessedResponse.builder()
                 .status("success")
-                .data(data)
+                .data(person)
+                .build();
+    }
+
+    @GetMapping("/api/profiles/{id}")
+    public ProcessedResponse getUserById(@PathVariable UUID id) {
+
+        Person person = integrationService.getPersonById(id);
+
+        return mapToProcessedResponse(person);
+    }
+
+    @GetMapping("/api/profiles")
+    public MultipleProcessedResponse getUsersByParams(@RequestParam(required = false) String gender,
+            @RequestParam(required = false) 
+            String countryId, @RequestParam(required = false) String ageGroup) {
+        List<Person> response = integrationService.searchPeople(gender, countryId, ageGroup);
+        return mapSpecToMultipleProcessedResponse(response);
+    }
+
+    @DeleteMapping("/api/profiles/{id}")
+    public ResponseEntity<String> deleteUserById(@PathVariable UUID id) {
+        integrationService.deletePersonById(id);
+        return new ResponseEntity<>("OK", HttpStatus.NO_CONTENT);
+    }
+
+
+    private ProcessedResponse mapToProcessedResponse(Person person) {
+        return ProcessedResponse.builder()
+                .status("success")
+                .data(person)
+                .build();
+    }
+    
+    private MultipleProcessedResponse mapSpecToMultipleProcessedResponse(List<Person> list) {
+
+        return MultipleProcessedResponse.builder()
+                .status("success")
+                .data(list)
                 .build();
     }
 

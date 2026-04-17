@@ -8,11 +8,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestClientException;
 
 import com.mxr.integration.Response.ErrorResponse;
+import com.mxr.integration.Response.PersonExistsResponse;
 import com.mxr.integration.exceptions.AgifyExceptions.NullAgeException;
 import com.mxr.integration.exceptions.NationalizeExceptions.MissingCountryDataException;
+import com.mxr.integration.repo.PersonRepoImpl;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    
+    private final PersonRepoImpl repo;
+    
+    public GlobalExceptionHandler(PersonRepoImpl repo) {
+        this.repo = repo;
+    }
     
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(MissingServletRequestParameterException ex){
@@ -42,14 +50,15 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(PersonAlreadyExistsException.class)
-    public ResponseEntity<ErrorResponse> handlePersonAlreadyExistsException(PersonAlreadyExistsException ex){
-        ErrorResponse response = new ErrorResponse(
-            "error",
-            ex.getMessage()
-        );
-        return new ResponseEntity<>(response, HttpStatus.CONFLICT);
-    }
+    // @ExceptionHandler(PersonAlreadyExistsException.class)
+    // public ResponseEntity<PersonExistsResponse> handlePersonAlreadyExistsException(PersonAlreadyExistsException ex){
+    //     PersonExistsResponse response = new PersonExistsResponse(
+    //         "error",
+    //         ex.getMessage(),
+    //         repo.findByName(ex.getName())
+    //     );
+    //     return new ResponseEntity<>(response, HttpStatus.CONFLICT);
+    // }
 
     @ExceptionHandler(MissingGenderizeDataException.class)
     public ResponseEntity<ErrorResponse> handleMissingGenderizeDataException(MissingGenderizeDataException ex){
@@ -57,7 +66,7 @@ public class GlobalExceptionHandler {
             "error",
             ex.getMessage()
         );
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return new ResponseEntity<>(response, HttpStatus.BAD_GATEWAY);
     }
 
     @ExceptionHandler(RestClientException.class)

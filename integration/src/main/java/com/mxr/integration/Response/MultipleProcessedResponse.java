@@ -2,17 +2,17 @@ package com.mxr.integration.Response;
 
 import com.mxr.integration.model.Person;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 
 @Data
 @Builder
-@AllArgsConstructor
-@JsonPropertyOrder({ "status", "data" })
-public class ProcessedResponse {
+@JsonPropertyOrder({"status", "data"})
+public class MultipleProcessedResponse {
     public String status;
-    public Person data;
+    public List<Person> data;
 }

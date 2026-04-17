@@ -1,17 +1,18 @@
 package com.mxr.integration.Response;
 
+import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.mxr.integration.model.Person;
-
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
-@AllArgsConstructor
 @Data
-public class PersonExistsResponse {
-    public String status;
+@JsonPropertyOrder({ "status", "message", "data" })
+
+public class PersonExistsResponse extends ProcessedResponse {
+    //public String status;
     public String message;
-    public Person person;
+
+    public PersonExistsResponse(String status, Person data, String message) {
+        super(status, data);
+        this.message = message;
+    }
 }
-
-
-

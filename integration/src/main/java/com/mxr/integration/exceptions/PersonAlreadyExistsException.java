@@ -2,8 +2,14 @@ package com.mxr.integration.exceptions;
 
 public class PersonAlreadyExistsException extends RuntimeException {
 
-    public PersonAlreadyExistsException() {
-        super("Person already exists");
+    private String name;
+    public PersonAlreadyExistsException(String name) {
+        super(String.format("Person %s already exists", name));
+        this.name = name;
+    }
+
+    public String getName() {
+        return name;
     }
 
 }

@@ -13,4 +13,10 @@ public interface PersonRepoImpl extends JpaRepository<Person, UUID>, JpaSpecific
     Optional<Person> findNameIgnoreCase(String name);
 
     void deleteByName(String name);
+
+    Person findByName(String name);
+
+    Optional<Person> findById(UUID id);
+
+    boolean existsByName(String name);
 }

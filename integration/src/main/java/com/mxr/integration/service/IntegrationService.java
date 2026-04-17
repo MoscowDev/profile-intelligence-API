@@ -10,6 +10,8 @@ import org.springframework.web.client.RestTemplate;
 import com.mxr.integration.Response.AgifyResponse;
 import com.mxr.integration.Response.GenderizeResponse;
 import com.mxr.integration.Response.NationalizeResponse;
+import com.mxr.integration.Response.PersonExistsResponse;
+import com.mxr.integration.Response.ProcessedResponse;
 import com.mxr.integration.exceptions.MissingGenderizeDataException;
 import com.mxr.integration.exceptions.MissingOrEmptyNameException;
 import com.mxr.integration.exceptions.PersonAlreadyExistsException;
@@ -33,19 +35,19 @@ public class IntegrationService {
 
     RestTemplate restTemplate = new RestTemplate();
 
-    public Person savePerson(String name) {
+    public ProcessedResponse savePerson(String name) {
+        validateName(name);
+        if (repo.existsByName(name)) {
+            Person person = repo.findNameIgnoreCase(name).get();
+            return new PersonExistsResponse("error", person, "Profile already exists");
+        }
         GenderizeResponse genderizeResponse = getGenderizeResponse(name);
         AgifyResponse agifyResponse = getAgifyResponse(name);
         NationalizeResponse nationalizeResponse = getNationalizeResponse(name);
         Person person = mapToPerson(genderizeResponse, agifyResponse, nationalizeResponse);
+        repo.save(person);
 
-        Optional<Person> existingPerson = repo.findNameIgnoreCase(person.getName());
-        if (existingPerson.isPresent()) {
-            throw new PersonAlreadyExistsException();
-        }
-
-        return repo.save(person);
-
+        return new ProcessedResponse("success", person);
     }
 
     public List<Person> searchPeople(String gender, String countryId, String ageGroup) {
@@ -65,8 +67,14 @@ public class IntegrationService {
         repo.deleteByName(name);
     }
 
+    public void deletePersonById(UUID id) {
+        if (!repo.existsById(id)) {
+            throw new PersonNotFoundException("Person not found with id: " + id);
+        }
+        repo.deleteById(id);
+    }
+
     public GenderizeResponse getGenderizeResponse(String name) {
-        validateName(name);
 
         String genderizeUrl = "https://api.genderize.io/?name=" + name;
         GenderizeResponse genderizeResponse = restTemplate.getForObject(genderizeUrl, GenderizeResponse.class);
@@ -103,7 +111,7 @@ public class IntegrationService {
         return nationalizeResponse;
     }
 
-    private Person mapToPerson(GenderizeResponse genderizeResponse, AgifyResponse agifyResponse,
+    public Person mapToPerson(GenderizeResponse genderizeResponse, AgifyResponse agifyResponse,
             NationalizeResponse nationalizeResponse) {
         List<CountryData> countries = nationalizeResponse.getCountries();
         UUID id = UUID.randomUUID();
@@ -120,12 +128,6 @@ public class IntegrationService {
                 .build();
     }
 
-    private CountryData getCountryWithHighestProbability(List<CountryData> countries) {
-        return countries.stream()
-                .max((c1, c2) -> Double.compare(c1.getProbability(), c2.getProbability()))
-                .orElseThrow(() -> new MissingCountryDataException("No country data available for the provided name"));
-    }
-
     private String calculateAgeGroup(int age) {
         if (age <= 12 && age >= 0)
             return "child";
@@ -138,9 +140,15 @@ public class IntegrationService {
         return "senior";
     }
 
+    private CountryData getCountryWithHighestProbability(List<CountryData> countries) {
+        return countries.stream()
+                .max((c1, c2) -> Double.compare(c1.getProbability(), c2.getProbability()))
+                .orElseThrow(() -> new MissingCountryDataException("No country data available for the provided name"));
+    }
+
     private void validateName(String name) {
         if (name.isBlank())
-            throw new MissingOrEmptyNameException("Name cannot be empty");
+            throw new MissingOrEmptyNameException("Name cannot be empty", name);
         if (!name.matches("[a-zA-Z ]+"))
             throw new InvalidNameException("Name must contain only letters");
     }
